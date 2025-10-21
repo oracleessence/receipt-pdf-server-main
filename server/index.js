@@ -10,11 +10,6 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
-// Root endpoint for health check
-app.get('/', (req, res) => {
-    res.status(200).send('<h1>PDF Generation Server is running!</h1><p>Send a POST request to /webhook to generate a PDF.</p>');
-});
-
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL || '';
@@ -134,7 +129,7 @@ function generateReceiptPdf(data, jsPDF) {
     return Buffer.from(doc.output('arraybuffer'));
 }
 
-// Secure the webhook endpoint with the authentication middleware
+// --- API ROUTES (define before frontend serving) ---
 app.post('/webhook', authenticateKey, (req, res) => {
   try {
     const { payload, mapping } = req.body;
@@ -172,6 +167,17 @@ app.post('/webhook', authenticateKey, (req, res) => {
 });
 
 app.use('/pdfs', express.static(PDF_DIR));
+
+// --- FRONTEND SERVING ---
+// Serve static files from the root directory (where the index.html is)
+const FRONTEND_DIR = path.join(__dirname, '..');
+app.use(express.static(FRONTEND_DIR));
+
+// For any other GET request that doesn't match an API route or a static file,
+// send the index.html file. This allows the React application to handle routing.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
+});
 
 app.listen(PORT, () => {
     if (!API_KEY) {

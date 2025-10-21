@@ -76,10 +76,6 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
-app.get('/', (req, res) => {
-    res.status(200).send('<h1>PDF Generation Server is running!</h1><p>Send a POST request to /webhook to generate a PDF.</p>');
-});
-
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL || '';
@@ -182,6 +178,7 @@ function generateReceiptPdf(data, jsPDF) {
     return Buffer.from(doc.output('arraybuffer'));
 }
 
+// --- API ROUTES ---
 app.post('/webhook', authenticateKey, (req, res) => {
   try {
     const { payload, mapping } = req.body;
@@ -212,6 +209,13 @@ app.post('/webhook', authenticateKey, (req, res) => {
 });
 
 app.use('/pdfs', express.static(PDF_DIR));
+
+// --- FRONTEND SERVING ---
+const FRONTEND_DIR = path.join(__dirname, '..');
+app.use(express.static(FRONTEND_DIR));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
+});
 
 app.listen(PORT, () => {
     if (!API_KEY) {
@@ -284,7 +288,7 @@ API_KEY=${apiKey}
         return payload;
     };
 
-    const curlCode = `curl -X POST http://localhost:3000/webhook \\
+    const curlCode = `curl -X POST https://receipt-pdf-server-main.onrender.com/webhook \\
 -H "Content-Type: application/json" \\
 -H "Authorization: Bearer ${apiKey}" \\
 -d '{
@@ -329,13 +333,12 @@ API_KEY=${apiKey}
                     <CodeBlock code={dotEnvCode} />
                 </div>
                 <div>
-                    <h3 className="text-lg font-semibold text-indigo-300">Step 6: Start Your Server</h3>
-                    <p className="mt-2 text-sm text-gray-400">Your server is ready. Run the start command and it will begin listening for requests on <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">http://localhost:3000</a>.</p>
-                    <CodeBlock code="npm start" />
+                    <h3 className="text-lg font-semibold text-indigo-300">Step 6: Deploy & Run Your Server</h3>
+                    <p className="mt-2 text-sm text-gray-400">Run <code className="text-xs bg-gray-900 p-1 rounded">npm start</code> to run the server locally. For online access, deploy it to a service like Render. Once deployed, it's live and ready for requests!</p>
                 </div>
                 <div>
-                    <h3 className="text-lg font-semibold text-indigo-300">Step 7: Send a Test Request</h3>
-                    <p className="mt-2 text-sm text-gray-400">Use this cURL command in a new terminal to send a test request to your running server. It includes your current field mappings and a sample payload.</p>
+                    <h3 className="text-lg font-semibold text-indigo-300">Step 7: Send a Test Request to Your Live Server</h3>
+                    <p className="mt-2 text-sm text-gray-400">Use this cURL command in a new terminal to send a test request to your live server. It includes your current field mappings and a sample payload.</p>
                     <CodeBlock code={curlCode} />
                 </div>
             </div>
