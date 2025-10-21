@@ -1,0 +1,5 @@
+{
+  "name": "JSON to Receipt PDF Generator",
+  "description": "An application that generates a professional receipt PDF from JSON. Includes a complete Node.js server for direct webhook integration with no-code platforms.",
+  "requestFramePermissions": []
+}
