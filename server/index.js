@@ -11,26 +11,11 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.API_KEY;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL || '';
 const PDF_DIR = path.join(__dirname, 'pdfs');
 if (!fs.existsSync(PDF_DIR)) {
   fs.mkdirSync(PDF_DIR);
 }
-
-// Middleware to check for API key
-const authenticateKey = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Expecting "Bearer <token>"
-
-    if (token == null) {
-        return res.status(401).json({ error: 'Unauthorized: No token provided.' });
-    }
-    if (token !== API_KEY) {
-        return res.status(403).json({ error: 'Forbidden: Invalid token.' });
-    }
-    next();
-};
 
 // Helper to get a value from a nested object using dot notation
 const get = (obj, path, defaultValue = undefined) => {
@@ -130,7 +115,7 @@ function generateReceiptPdf(data, jsPDF) {
 }
 
 // --- API ROUTES (define before frontend serving) ---
-app.post('/webhook', authenticateKey, (req, res) => {
+app.post('/webhook', (req, res) => {
   try {
     const { payload, mapping } = req.body;
     if (!payload || typeof payload !== 'object') {
@@ -180,8 +165,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    if (!API_KEY) {
-        console.warn('⚠️ WARNING: API_KEY is not set in your .env file. The /webhook endpoint will be unsecured.');
-    }
   console.log(`✅ PDF Webhook Server is running on http://localhost:${PORT}`);
 });

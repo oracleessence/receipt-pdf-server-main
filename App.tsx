@@ -5,7 +5,6 @@ import PdfPreview from './components/PdfPreview';
 import Loader from './components/Loader';
 import AutomationGuide from './components/AutomationGuide';
 import { DownloadIcon } from './components/icons/DownloadIcon';
-import ApiKeyDisplay from './components/ApiKeyDisplay';
 import WebhookMapper from './components/WebhookMapper';
 
 // This lets TypeScript know that jsPDF is available globally from the CDN in index.html
@@ -254,7 +253,6 @@ const App: React.FC = () => {
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [apiKey, setApiKey] = useState<string>('');
     const [mapping, setMapping] = useState({
         companyName: 'companyName',
         companyAddress: 'companyAddress',
@@ -275,20 +273,6 @@ const App: React.FC = () => {
         tax: 'tax',
         discount: 'discount'
     });
-
-    useEffect(() => {
-        // Generate a random API key on initial component mount
-        const generateApiKey = () => {
-            const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
-            let result = 'fc';
-            for (let i = 0; i < 28; i++) {
-                result += characters.charAt(Math.floor(Math.random() * characters.length));
-            }
-            return result;
-        };
-        setApiKey(generateApiKey());
-    }, []);
-
 
     const handleGeneratePdf = useCallback(async () => {
         setIsLoading(true);
@@ -353,8 +337,7 @@ const App: React.FC = () => {
                     </div>
                 </main>
                 <WebhookMapper mapping={mapping} setMapping={setMapping} />
-                <ApiKeyDisplay apiKey={apiKey} />
-                <AutomationGuide apiKey={apiKey} mapping={mapping} />
+                <AutomationGuide mapping={mapping} />
             </div>
         </div>
     );

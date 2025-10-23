@@ -46,7 +46,7 @@ interface Mapping {
     discount: string
 }
 
-const AutomationGuide: React.FC<{ apiKey: string, mapping: Mapping }> = ({ apiKey, mapping }) => {
+const AutomationGuide: React.FC<{ mapping: Mapping }> = ({ mapping }) => {
     const packageJsonCode = `{
   "name": "receipt-pdf-server",
   "version": "1.0.0",
@@ -77,20 +77,11 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.API_KEY;
 const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL || '';
 const PDF_DIR = path.join(__dirname, 'pdfs');
 if (!fs.existsSync(PDF_DIR)) {
   fs.mkdirSync(PDF_DIR);
 }
-
-const authenticateKey = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (token == null) return res.status(401).json({ error: 'Unauthorized: No token provided.' });
-    if (token !== API_KEY) return res.status(403).json({ error: 'Forbidden: Invalid token.' });
-    next();
-};
 
 const get = (obj, path, defaultValue = undefined) => {
   const travel = (regexp) =>
@@ -179,7 +170,7 @@ function generateReceiptPdf(data, jsPDF) {
 }
 
 // --- API ROUTES ---
-app.post('/webhook', authenticateKey, (req, res) => {
+app.post('/webhook', (req, res) => {
   try {
     const { payload, mapping } = req.body;
     if (!payload || typeof payload !== 'object') {
@@ -218,20 +209,14 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    if (!API_KEY) {
-        console.warn('⚠️ WARNING: API_KEY is not set in your .env file. The /webhook endpoint will be unsecured.');
-    }
     console.log(\`✅ PDF Webhook Server is running on http://localhost:\${PORT}\`);
 });`;
 
-    const dotEnvCode = `# This is your secret key to protect the /webhook endpoint.
-# Make sure it matches the bearer token in your HTTP requests.
-API_KEY=${apiKey}
-
-# Optional: Port for the server to run on. Defaults to 3000.
+    const dotEnvCode = `# Optional: Port for the server to run on. Defaults to 3000.
 # PORT=3000
 
 # Optional: A second webhook URL to send the generated PDF link to.
+# This is useful for chaining automations in platforms like Make.com.
 # MAKE_WEBHOOK_URL=https://hook.make.com/your-webhook-id`;
 
     // A helper to build a sample object from a dot-notation path
@@ -290,7 +275,6 @@ API_KEY=${apiKey}
 
     const curlCode = `curl -X POST https://receipt-pdf-server-main.onrender.com/webhook \\
 -H "Content-Type: application/json" \\
--H "Authorization: Bearer ${apiKey}" \\
 -d '{
   "mapping": ${JSON.stringify(mapping, null, 2)},
   "payload": ${JSON.stringify(generateSamplePayload(), null, 2)}
@@ -328,8 +312,8 @@ API_KEY=${apiKey}
                     <CodeBlock code={indexJsCode} />
                 </div>
                 <div>
-                    <h3 className="text-lg font-semibold text-indigo-300">Step 5: Create a <code className="text-sm bg-gray-900 p-1 rounded">.env</code> File</h3>
-                    <p className="mt-2 text-sm text-gray-400">Create this file in your project folder and add your API key to secure the server.</p>
+                    <h3 className="text-lg font-semibold text-indigo-300">Step 5: Create a <code className="text-sm bg-gray-900 p-1 rounded">.env</code> File (Optional)</h3>
+                    <p className="mt-2 text-sm text-gray-400">Create this file in your project folder if you need to configure the port or a secondary webhook URL.</p>
                     <CodeBlock code={dotEnvCode} />
                 </div>
                 <div>
