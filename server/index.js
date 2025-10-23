@@ -115,7 +115,7 @@ function generateReceiptPdf(data, jsPDF) {
 }
 
 // --- API ROUTES (define before frontend serving) ---
-app.post('/webhook', (req, res) => {
+app.post('/', (req, res) => {
   try {
     const { payload, mapping } = req.body;
     if (!payload || typeof payload !== 'object') {
@@ -139,6 +139,8 @@ app.post('/webhook', (req, res) => {
       axios.post(MAKE_WEBHOOK_URL, {
         pdfUrl: fileUrl,
         originalPayload: payload,
+      }, {
+        headers: { 'Content-Type': 'application/json' }
       }).catch(err => {
         console.error('Error sending to secondary webhook:', err.message);
       });

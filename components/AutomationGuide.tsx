@@ -170,7 +170,7 @@ function generateReceiptPdf(data, jsPDF) {
 }
 
 // --- API ROUTES ---
-app.post('/webhook', (req, res) => {
+app.post('/', (req, res) => {
   try {
     const { payload, mapping } = req.body;
     if (!payload || typeof payload !== 'object') {
@@ -188,8 +188,9 @@ app.post('/webhook', (req, res) => {
     console.log(\`PDF created: \${fileUrl}\`);
 
     if (MAKE_WEBHOOK_URL) {
-      axios.post(MAKE_WEBHOOK_URL, { pdfUrl: fileUrl, originalPayload: payload })
-        .catch(err => console.error('Error sending to secondary webhook:', err.message));
+      axios.post(MAKE_WEBHOOK_URL, { pdfUrl: fileUrl, originalPayload: payload }, {
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(err => console.error('Error sending to secondary webhook:', err.message));
     }
 
     res.status(200).json({ message: 'PDF created successfully', url: fileUrl });
@@ -273,7 +274,7 @@ app.listen(PORT, () => {
         return payload;
     };
 
-    const curlCode = `curl -X POST https://receipt-pdf-server-main.onrender.com/webhook \\
+    const curlCode = `curl -X POST https://receipt-pdf-server-main.onrender.com/ \\
 -H "Content-Type: application/json" \\
 -d '{
   "mapping": ${JSON.stringify(mapping, null, 2)},
