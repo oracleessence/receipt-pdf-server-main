@@ -2,20 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { jsPDF } = require('jspdf');
-const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
 const PORT = process.env.PORT || 3000;
-const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL || '';
-const PDF_DIR = path.join(__dirname, 'pdfs');
-if (!fs.existsSync(PDF_DIR)) {
-  fs.mkdirSync(PDF_DIR);
-}
 
 // Helper to get a value from a nested object using dot notation
 const get = (obj, path, defaultValue = undefined) => {
@@ -140,33 +133,17 @@ app.post('/', (req, res) => {
     
     const pdfBuffer = generateReceiptPdf(dataForPdf, jsPDF);
     const filename = `receipt_${Date.now()}.pdf`;
-    const filePath = path.join(PDF_DIR, filename);
 
-    fs.writeFileSync(filePath, pdfBuffer);
+    // Send the PDF file directly in the response
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdfBuffer);
     
-    const fileUrl = `${req.protocol}://${req.get('host')}/pdfs/${filename}`;
-    console.log(`PDF created: ${fileUrl}`);
-
-    // Optionally, send the result to another webhook (e.g., Make.com)
-    if (MAKE_WEBHOOK_URL) {
-      axios.post(MAKE_WEBHOOK_URL, {
-        pdfUrl: fileUrl,
-        originalPayload: payload,
-      }, {
-        headers: { 'Content-Type': 'application/json' }
-      }).catch(err => {
-        console.error('Error sending to secondary webhook:', err.message);
-      });
-    }
-
-    res.status(200).json({ message: 'PDF created successfully', url: fileUrl });
   } catch (error) {
     console.error('Error generating PDF:', error);
     res.status(500).json({ error: 'Failed to generate PDF.' });
   }
 });
-
-app.use('/pdfs', express.static(PDF_DIR));
 
 // --- FRONTEND SERVING ---
 // Serve static files from the root directory (where the index.html is)

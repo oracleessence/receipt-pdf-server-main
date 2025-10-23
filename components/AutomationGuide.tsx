@@ -56,7 +56,6 @@ const AutomationGuide: React.FC<{ mapping: Mapping }> = ({ mapping }) => {
     "start": "node index.js"
   },
   "dependencies": {
-    "axios": "^1.7.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
@@ -68,20 +67,13 @@ const AutomationGuide: React.FC<{ mapping: Mapping }> = ({ mapping }) => {
 const express = require('express');
 const cors = require('cors');
 const { jsPDF } = require('jspdf');
-const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
 const PORT = process.env.PORT || 3000;
-const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL || '';
-const PDF_DIR = path.join(__dirname, 'pdfs');
-if (!fs.existsSync(PDF_DIR)) {
-  fs.mkdirSync(PDF_DIR);
-}
 
 const get = (obj, path, defaultValue = undefined) => {
   const travel = (regexp) =>
@@ -193,26 +185,17 @@ app.post('/', (req, res) => {
     const pdfBuffer = generateReceiptPdf(dataForPdf, jsPDF);
 
     const filename = \`receipt_\${Date.now()}.pdf\`;
-    const filePath = path.join(PDF_DIR, filename);
-    fs.writeFileSync(filePath, pdfBuffer);
     
-    const fileUrl = \`\${req.protocol}://\${req.get('host')}/pdfs/\${filename}\`;
-    console.log(\`PDF created: \${fileUrl}\`);
-
-    if (MAKE_WEBHOOK_URL) {
-      axios.post(MAKE_WEBHOOK_URL, { pdfUrl: fileUrl, originalPayload: payload }, {
-        headers: { 'Content-Type': 'application/json' }
-      }).catch(err => console.error('Error sending to secondary webhook:', err.message));
-    }
-
-    res.status(200).json({ message: 'PDF created successfully', url: fileUrl });
+    // Send the PDF file directly in the response
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', \`attachment; filename="\${filename}"\`);
+    res.send(pdfBuffer);
+    
   } catch (error) {
     console.error('Error generating PDF:', error);
     res.status(500).json({ error: 'Failed to generate PDF.' });
   }
 });
-
-app.use('/pdfs', express.static(PDF_DIR));
 
 // --- FRONTEND SERVING ---
 const FRONTEND_DIR = path.join(__dirname, '..');
@@ -226,11 +209,7 @@ app.listen(PORT, () => {
 });`;
 
     const dotEnvCode = `# Optional: Port for the server to run on. Defaults to 3000.
-# PORT=3000
-
-# Optional: A second webhook URL to send the generated PDF link to.
-# This is useful for chaining automations in platforms like Make.com.
-# MAKE_WEBHOOK_URL=https://hook.make.com/your-webhook-id`;
+# PORT=3000`;
 
     // A helper to build a sample object from a dot-notation path
     const buildObjectFromPath = (path: string, value: any, obj: any = {}) => {
@@ -291,7 +270,8 @@ app.listen(PORT, () => {
 -d '{
   "mapping": ${JSON.stringify(mapping, null, 2)},
   "payload": ${JSON.stringify(generateSamplePayload(), null, 2)}
-}'`;
+}' \\
+--output receipt.pdf`;
 
     return (
         <section className="mt-8 p-6 bg-gray-800/50 rounded-lg border border-gray-700">
@@ -321,12 +301,12 @@ app.listen(PORT, () => {
                 </div>
                 <div>
                     <h3 className="text-lg font-semibold text-indigo-300">Step 4: Create the Server File <code className="text-sm bg-gray-900 p-1 rounded">index.js</code></h3>
-                    <p className="mt-2 text-sm text-gray-400">This is the core of your server. It handles requests, maps data, and generates the PDF.</p>
+                    <p className="mt-2 text-sm text-gray-400">This is the core of your server. It handles requests, maps data, and returns the generated PDF file directly.</p>
                     <CodeBlock code={indexJsCode} />
                 </div>
                 <div>
                     <h3 className="text-lg font-semibold text-indigo-300">Step 5: Create a <code className="text-sm bg-gray-900 p-1 rounded">.env</code> File (Optional)</h3>
-                    <p className="mt-2 text-sm text-gray-400">Create this file in your project folder if you need to configure the port or a secondary webhook URL.</p>
+                    <p className="mt-2 text-sm text-gray-400">Create this file in your project folder if you need to configure a custom port.</p>
                     <CodeBlock code={dotEnvCode} />
                 </div>
                 <div>
@@ -335,7 +315,7 @@ app.listen(PORT, () => {
                 </div>
                 <div>
                     <h3 className="text-lg font-semibold text-indigo-300">Step 7: Send a Test Request to Your Live Server</h3>
-                    <p className="mt-2 text-sm text-gray-400">Use this cURL command in a new terminal to send a test request to your live server. It includes your current field mappings and a sample payload.</p>
+                    <p className="mt-2 text-sm text-gray-400">Use this cURL command in a new terminal to send a test request. It includes your current field mappings and will save the resulting PDF as <code className="text-xs bg-gray-900 p-1 rounded">receipt.pdf</code> in your current directory.</p>
                     <CodeBlock code={curlCode} />
                 </div>
             </div>
