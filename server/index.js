@@ -6,7 +6,20 @@ const path = require('path');
 
 const app = express();
 app.use(cors());
+
+// Increase flexibility by accepting both JSON and URL-encoded bodies
 app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+
+// Custom error handler for bad JSON to provide a clearer error message
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('Bad JSON received:', err.message);
+    return res.status(400).json({ error: 'Malformed JSON in request body. Please ensure your webhook is sending valid JSON.' });
+  }
+  next(err);
+});
+
 
 const PORT = process.env.PORT || 3000;
 
