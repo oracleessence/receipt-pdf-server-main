@@ -117,8 +117,21 @@ function generateReceiptPdf(data, jsPDF) {
 // --- API ROUTES (define before frontend serving) ---
 app.post('/', (req, res) => {
   try {
-    const { payload, mapping } = req.body;
-    if (!payload || typeof payload !== 'object') {
+    const { mapping } = req.body;
+    let payload;
+
+    // Handle both nested { "payload": {...} } and flat request bodies
+    if (req.body.payload && typeof req.body.payload === 'object') {
+      payload = req.body.payload;
+    } else {
+      payload = { ...req.body };
+      // If a mapping was sent, don't include it as part of the payload data.
+      if (payload.mapping) {
+        delete payload.mapping;
+      }
+    }
+
+    if (!payload || typeof payload !== 'object' || Object.keys(payload).length === 0) {
       return res.status(400).json({ error: 'Invalid or missing "payload" object.' });
     }
     
